@@ -1,0 +1,107 @@
+import React, { useState } from "react";
+import authService from "../appwrite/auth";
+import { useDispatch } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { login as authLogin } from "../store/authSlice";
+import Button from "./Button";
+import Input from "./Input";
+import { useForm } from "react-hook-form";
+import Logo from "./Logo";
+
+export default function Signup() {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { register, handleSubmit } = useForm();
+  const [error, setError] = React.useState(null);
+
+  const handleSignup = async (data) => {
+    setError(null);
+    try {
+      const session = await authService.createAccount(
+        data.email,
+        data.password,
+      );
+      if (!session) {
+        throw new Error("Signup failed");
+      }
+      const userData = await authService.getCurrentUser();
+      dispatch(
+        authLogin({
+          $id: userData.$id,
+          name: userData.name,
+          email: userData.email,
+        }),
+      );
+      navigate("/");
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center">
+      <div
+        className={`mx-auto w-full max-w-lg bg-gray-100 rounded-xl p-10 border border-black/10`}
+      >
+        <div className="mb-2 flex justify-center">
+          <span className="inline-block w-full max-w-[100px]">
+            <Logo width="100%" />
+          </span>
+        </div>
+        <h2 className="text-center text-2xl font-bold leading-tight">
+          Sign up to create account
+        </h2>
+        <p className="mt-2 text-center text-base text-black/60">
+          Already have an account?&nbsp;
+          <Link
+            to="/login"
+            className="font-medium text-primary transition-all duration-200 hover:underline"
+          >
+            Sign In
+          </Link>
+        </p>
+        {error && <p className="text-red-600 mt-8 text-center">{error}</p>}
+
+        <form onSubmit={handleSubmit(handleSignup)}>
+          <div className="space-y-5">
+            <Input
+              label="Full Name"
+              placeholder="Enter full name"
+              {...register("name", { required: true })}
+            />
+            <Input
+              label="Email:"
+              placeholder="Enter Email"
+              type="email"
+              {...register("email", {
+                required: true,
+                validate: {
+                  matchPatern: (value) =>
+                    /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(value) ||
+                    "Email address must be a valid address",
+                },
+              })}
+            />
+            <Input
+              label="Password:"
+              placeholder="Enter Password"
+              type="password"
+              {...register("password", {
+                required: true,
+                validate: {
+                  matchPatern: (value) =>
+                    /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/.test(value) ||
+                    "Password must be at least 8 characters long and contain at least one letter and one number",
+                },
+              })}
+            />
+
+            <Button type="submit" className="w-full">
+              Create Account
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
